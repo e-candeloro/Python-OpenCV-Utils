@@ -46,11 +46,11 @@ def videocapture(fps_cap=60, show_fps=True, source=0):
             fps = 1.0 / float(ctime - ptime)
             ptime = ctime
 
+            # IMAGE PROCESSING CODE HERE
+
             if show_fps:
                 cv2.putText(frame, "FPS:" + str(round(fps, 0)), (10, 400), cv2.FONT_HERSHEY_PLAIN, 2,
                             (255, 255, 255), 1)
-
-            # IMAGE PROCESSING CODE HERE
 
             # show the frame on screen
             cv2.imshow("Frame (press 'q' to exit)", frame)
