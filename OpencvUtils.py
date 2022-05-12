@@ -104,19 +104,19 @@ def eulerAnglesToRotationMatrix(theta):
     :return: 3 by 3 np array
         Return 3x3 rotation matrix
     '''
-    #yaw rotation
+    # yaw rotation
     R_x = np.array([[1,         0,                  0],
-                    [0,         math.cos(theta[0]), -math.sin(theta[0])],
-                    [0,         math.sin(theta[0]), math.cos(theta[0])]
+                    [0,         np.cos(theta[0]), -np.sin(theta[0])],
+                    [0,         np.sin(theta[0]), np.cos(theta[0])]
                     ])
-    #pitch rotation
-    R_y = np.array([[math.cos(theta[1]),    0,      math.sin(theta[1])],
+    # pitch rotation
+    R_y = np.array([[np.cos(theta[1]),    0,      np.sin(theta[1])],
                     [0,                     1,      0],
-                    [-math.sin(theta[1]),   0,      math.cos(theta[1])]
+                    [-np.sin(theta[1]),   0,      np.cos(theta[1])]
                     ])
-    #roll rotation
-    R_z = np.array([[math.cos(theta[2]),    -math.sin(theta[2]),    0],
-                    [math.sin(theta[2]),    math.cos(theta[2]),     0],
+    # roll rotation
+    R_z = np.array([[np.cos(theta[2]),    -np.sin(theta[2]),    0],
+                    [np.sin(theta[2]),    np.cos(theta[2]),     0],
                     [0,                     0,                      1]
                     ])
 
@@ -157,4 +157,3 @@ def rotationMatrixToEulerAngles(R, precision=1e-4):
         z = 0
 
     return np.array([x, y, z])  # returns YAW, PITCH, ROLL in radians
-
