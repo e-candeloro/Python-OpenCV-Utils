@@ -1,4 +1,3 @@
-import math
 import cv2
 import numpy as np
 
@@ -145,16 +144,16 @@ def rotationMatrixToEulerAngles(R, precision=1e-4):
     singular = sy < precision
 
     if not singular:  # if not in a singularity, use the standard formula
-        x = math.atan2(R[2, 1], R[2, 2])  # atan2(R31, R33) -> YAW, angle PSI
+        x = np.arctan2(R[2, 1], R[2, 2])  # atan2(R31, R33) -> YAW, angle PSI
 
         # atan2(-R31, sqrt(R11^2 + R21^2)) -> PITCH, angle delta
-        y = math.atan2(-R[2, 0], sy)
+        y = np.arctan2(-R[2, 0], sy)
 
-        z = math.atan2(R[1, 0], R[0, 0])  # atan2(R21,R11) -> ROLL, angle phi
+        z = np.arctan2(R[1, 0], R[0, 0])  # atan2(R21,R11) -> ROLL, angle phi
 
     else:  # if in gymbal lock, use different formula for yaw, pitch roll
-        x = math.atan2(-R[1, 2], R[1, 1])
-        y = math.atan2(-R[2, 0], sy)
+        x = np.arctan2(-R[1, 2], R[1, 1])
+        y = np.arctan2(-R[2, 0], sy)
         z = 0
 
     return np.array([x, y, z])  # returns YAW, PITCH, ROLL in radians
