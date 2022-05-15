@@ -2,8 +2,9 @@ import mediapipe as mp
 import cv2
 import time
 
+
 class HandDetector():
-    def __init__(self, mode=False, maxHands = 1,modCompl = 1, detCon = 0.5, trackCon = 0.5 ):
+    def __init__(self, mode=False, maxHands=1, modCompl=1, detCon=0.5, trackCon=0.5):
         self.mode = mode
         self.maxHands = maxHands
         self.modCompl = modCompl
@@ -12,15 +13,15 @@ class HandDetector():
 
         self.mpHands = mp.solutions.hands
         self.hands = self.mpHands.Hands(static_image_mode=self.mode,
-               max_num_hands=self.maxHands,
-               model_complexity=self.modCompl,
-               min_detection_confidence=self.detCon,
-               min_tracking_confidence=self.trackCon)
+                                        max_num_hands=self.maxHands,
+                                        model_complexity=self.modCompl,
+                                        min_detection_confidence=self.detCon,
+                                        min_tracking_confidence=self.trackCon)
         self.mpDraw = mp.solutions.drawing_utils
 
         self.results = None
 
-    def findHands(self, img, draw = True):
+    def findHands(self, img, draw=True):
         h, w, c = img.shape
         imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         self.results = self.hands.process(imgRGB)
@@ -34,7 +35,7 @@ class HandDetector():
                                            self.mpHands.HAND_CONNECTIONS)
         return img
 
-    def findHandPosition(self, img, hand_num = 0, draw = True):
+    def findHandPosition(self, img, hand_num=0, draw=True):
         lm_list = []
         h, w, c = img.shape
 
@@ -48,16 +49,25 @@ class HandDetector():
 
         return lm_list
 
+    def findHand3DPosition(self, hand_num=0, draw=False):
+        lm3d_list = []
+        if self.results.multi_hand_world_landmarks:
+            hand3d = self.results.multi_hand_world_landmarks[hand_num]
+            for id_point, lm in enumerate(hand3d.landmark):
+                lm3d_list.append([id_point, lm.x, lm.y, lm.z])
+            if draw:
+                self.mpDraw.plot_landmarks(
+                    hand3d, self.mpHands.HAND_CONNECTIONS, azimuth=5)
+        return lm3d_list
+
 
 def main(camera_source=0, show_fps=True):
-
     ctime = 0  # current time (used to compute FPS)
     ptime = 0  # past time (used to compute FPS)
 
     # capture the input from the default system camera (camera number 0)
     cap = cv2.VideoCapture(camera_source)
     detector = HandDetector()
-
 
     if not cap.isOpened():  # if the camera can't be opened exit the program
         print("Cannot open camera")
@@ -73,8 +83,10 @@ def main(camera_source=0, show_fps=True):
 
         frame = detector.findHands(frame)
         hand_lmlist = detector.findHandPosition(frame, hand_num=0, draw=False)
-        if len(hand_lmlist) > 0:
-            print(hand_lmlist)
+        hand_3dlmlist = detector.findHand3DPosition()
+
+        if hand_lmlist != 0 and hand_3dlmlist != 0:
+            print(f"hand keypoints:\n{hand_lmlist}\nhand 3d keypoints position:\n{hand_3dlmlist}")
 
         # compute the actual frame rate per second (FPS) of the webcam video capture stream, and show it
         ctime = time.time()
