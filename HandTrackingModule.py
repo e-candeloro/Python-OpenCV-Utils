@@ -19,8 +19,6 @@ class HandDetector():
                                         min_tracking_confidence=self.trackCon)
         self.mpDraw = mp.solutions.drawing_utils
 
-        self.results = None
-
     def findHands(self, img, draw=True):
         h, w, c = img.shape
         imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -86,7 +84,8 @@ def main(camera_source=0, show_fps=True):
         hand_3dlmlist = detector.findHand3DPosition()
 
         if hand_lmlist != 0 and hand_3dlmlist != 0:
-            print(f"hand keypoints:\n{hand_lmlist}\nhand 3d keypoints position:\n{hand_3dlmlist}")
+            print(
+                f"hand keypoints:\n{hand_lmlist}\nhand 3d keypoints position:\n{hand_3dlmlist}")
 
         # compute the actual frame rate per second (FPS) of the webcam video capture stream, and show it
         ctime = time.time()
