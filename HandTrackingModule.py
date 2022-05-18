@@ -50,7 +50,9 @@ class HandDetector():
         :param: hand_num (hand id number to detect, default is zero)
         :draw: bool (draws circles over the hand keypoints, default is true)
 
-        :returns: lm_list (list of lists of keypoints)
+        :returns: 
+            lm_list (list of lists of keypoints)
+            img
         '''
         lm_list = []
         h, w, c = img.shape
@@ -63,7 +65,7 @@ class HandDetector():
                 if draw:
                     cv2.circle(img, (cx, cy), 4, (0, 0, 255), -1)
 
-        return lm_list
+        return lm_list, img
 
     def findHand3DPosition(self, hand_num=0, draw=False):
         '''
@@ -113,7 +115,8 @@ def main(camera_source=0, show_fps=True):
             break
 
         frame = detector.findHands(frame)
-        hand_lmlist = detector.findHandPosition(frame, hand_num=0, draw=False)
+        hand_lmlist, frame = detector.findHandPosition(
+            frame, hand_num=0, draw=False)
         hand_3dlmlist = detector.findHand3DPosition()
 
         if hand_lmlist != 0 and hand_3dlmlist != 0:
