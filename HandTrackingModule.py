@@ -94,7 +94,7 @@ class HandDetector():
         return lm3d_list
 
     # TO DO: fix pose estimation function...
-    def findHandPose(self, lmlist, lm3dlist, frame, camera_matrix=None, dist_coeffs=None, draw_axis=True):
+    def findHandPose(self, lmlist, lm3dlist, frame, camera_matrix=None, dist_coeffs=None, draw_axis=True, axis_scale=0.05):
         '''
         Estimate hand pose using the 2d and 3d keypoints of the hand.
 
@@ -121,9 +121,9 @@ class HandDetector():
         self.hand_3dlm = lm3dlist
         self.frame = frame  # opencv image array
 
-        self.axis = np.float32([[0.01, 0, 0],
-                                [0, 0.05, 0],
-                                [0, 0, 0.01]])
+        self.axis = np.float32([[axis_scale, 0, 0],
+                                [0, axis_scale, 0],
+                                [0, 0, axis_scale]])
         # array that specify the length of the 3 projected axis from the nose
 
         if camera_matrix is None:
