@@ -5,11 +5,11 @@ import time
 
 class HandDetector():
     def __init__(self, mode=False, maxHands=1, modCompl=1, detCon=0.5, trackCon=0.5):
-        self.mode = mode
-        self.maxHands = maxHands
-        self.modCompl = modCompl
-        self.detCon = detCon
-        self.trackCon = trackCon
+        self.mode = mode  # static image mode,
+        self.maxHands = maxHands  # max number of hands to track
+        self.modCompl = modCompl  # complexity of the model (can be 0 or 1)
+        self.detCon = detCon  # detection confidence threshold
+        self.trackCon = trackCon  # tracking confidence threshold
 
         self.mpHands = mp.solutions.hands
         self.hands = self.mpHands.Hands(static_image_mode=self.mode,
@@ -20,6 +20,12 @@ class HandDetector():
         self.mpDraw = mp.solutions.drawing_utils
 
     def findHands(self, img, draw=True):
+        '''
+        Detects the hands and draws keypoints of the hands given and input image.
+        :param: img (opencv image in BGR)
+        :param: draw (boolean, draw the keypoint if set to true, default is true)
+        :returns: img (opencv image in BGR with keypoints drawn if draw is set to true)
+        '''
         h, w, c = img.shape
         imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         self.results = self.hands.process(imgRGB)
@@ -34,6 +40,18 @@ class HandDetector():
         return img
 
     def findHandPosition(self, img, hand_num=0, draw=True):
+        '''
+        Given and image, returns the hand keypoints position in the format of a list of lists
+        [[id_point0, x_point0, y_point0], ..., [id_point19, x_point19, y_point19]]
+        The number of hand keypoints are 20 in total.
+        Keypoints list and relative position are shown in the example notebook and on this site: https://google.github.io/mediapipe/solutions/hands.html
+
+        :param: img (opencv BGR image)
+        :param: hand_num (hand id number to detect, default is zero)
+        :draw: bool (draws circles over the hand keypoints, default is true)
+
+        :returns: lm_list (list of lists of keypoints)
+        '''
         lm_list = []
         h, w, c = img.shape
 
@@ -48,6 +66,18 @@ class HandDetector():
         return lm_list
 
     def findHand3DPosition(self, hand_num=0, draw=False):
+        '''
+        Find the hand 3d positions on the referred detected hand in real-world 3D coordinates 
+        that are in meters with the origin at the hand's approximate geometric center.
+        Please refer to the documentation for further details: 
+        https://google.github.io/mediapipe/solutions/hands.html#multi_hand_world_landmarks
+
+
+        :param: hand_num (hand id number to detect, default is zero)
+        :draw: bool (draws a 3d graph of the predicted locations in world coordinates of the hand keypoints, default is False)
+
+        :returns: list of lists of 3d hand keypoints in the format [[id_point, x_point,y_point,z_point]]
+        '''
         lm3d_list = []
         if self.results.multi_hand_world_landmarks:
             hand3d = self.results.multi_hand_world_landmarks[hand_num]
@@ -59,6 +89,7 @@ class HandDetector():
         return lm3d_list
 
 
+# MAIN SCRIPT EXAMPLE FOR REAL-TIME HAND TRACKING USING A WEBCAM
 def main(camera_source=0, show_fps=True):
     ctime = 0  # current time (used to compute FPS)
     ptime = 0  # past time (used to compute FPS)
