@@ -1,6 +1,9 @@
 import mediapipe as mp
 import cv2
+import numpy as np
 import time
+
+from OpencvUtils import draw_pose_info, rotationMatrixToEulerAngles
 
 
 class HandDetector():
@@ -90,9 +93,147 @@ class HandDetector():
                     hand3d, self.mpHands.HAND_CONNECTIONS, azimuth=5)
         return lm3d_list
 
+    # TO DO: fix pose estimation function...
+    def findHandPose(self, lmlist, lm3dlist, frame, camera_matrix=None, dist_coeffs=None, draw_axis=True):
+        '''
+        Estimate hand pose using the 2d and 3d keypoints of the hand.
+
+        Parameters
+        ----------
+        frame: opencv image array
+            contains frame to be processed
+        lmlist:
+            list of 2d landmarks detected of the 
+        lm3dlist:
+            list of 3d landmarks detected of the hand, in world coordinates
+        draw_axis: bool
+            If set to True, shows the head pose axis projected from the keypoints
+            used for pose estimation (default is True)
+
+        Returns
+        --------
+        - if successful: image_frame, roll, pitch, yaw (tuple)
+        - if unsuccessful: None,None,None,None (tuple)
+
+        '''
+
+        self.hand_lm = lmlist
+        self.hand_3dlm = lm3dlist
+        self.frame = frame  # opencv image array
+
+        self.axis = np.float32([[0.01, 0, 0],
+                                [0, 0.05, 0],
+                                [0, 0, 0.01]])
+        # array that specify the length of the 3 projected axis from the nose
+
+        if camera_matrix is None:
+            # if no camera matrix is given, estimate camera parameters using picture size
+            self.size = frame.shape
+            self.focal_length = self.size[1]
+            self.center = (self.size[1] / 2, self.size[0] / 2)
+            self.camera_matrix = np.array(
+                [[self.focal_length, 0, self.center[0]],
+                 [0, self.focal_length, self.center[1]],
+                 [0, 0, 1]], dtype="double"
+            )
+        else:
+            # take camera matrix
+            self.camera_matrix = camera_matrix
+
+        if dist_coeffs is None:  # if no distorsion coefficients are given, assume no lens distortion
+            self.dist_coeffs = np.zeros((4, 1))
+        else:
+            # take camera distortion coefficients
+            self.dist_coeffs = dist_coeffs
+
+        # index,middle finger, ring finger, pinky and thumb keypoints in the image
+        self.thumb_mcp_lm = tuple(self.hand_lm[1][1:])
+        self.index_finger_mcp_lm = tuple(self.hand_lm[5][1:])
+        self.middle_finger_mcp_lm = tuple(self.hand_lm[9][1:])
+        self.ring_finger_mcp_lm = tuple(self.hand_lm[13][1:])
+        self.pinky_mcp_lm = tuple(self.hand_lm[17][1:])
+        self.wrist_lm = tuple(self.hand_lm[0][1:])
+
+        # index,middle finger, ring finger, pinky and thumb 3d
+        # estimated position in world space coordinates
+
+        self.thumb_mcp_3dlm = tuple(self.hand_3dlm[1][1:])
+        self.index_finger_mcp_3dlm = tuple(self.hand_3dlm[5][1:])
+        self.middle_finger_mcp_3dlm = tuple(self.hand_3dlm[9][1:])
+        self.ring_finger_mcp_3dlm = tuple(self.hand_3dlm[13][1:])
+        self.pinky_mcp_3dlm = tuple(self.hand_3dlm[17][1:])
+        self.wrist_3dlm = tuple(self.hand_3dlm[0][1:])
+
+        # 3D hand keypoints in world space coordinates
+        self.model_points = np.array([
+            self.thumb_mcp_3dlm,
+            self.index_finger_mcp_3dlm,
+            self.middle_finger_mcp_3dlm,
+            self.ring_finger_mcp_3dlm,
+            self.pinky_mcp_3dlm,
+            self.wrist_3dlm,
+        ], dtype="double")
+
+        # 2D hand keypoints position in the image (frame)
+        self.image_points = np.array([
+            self.thumb_mcp_lm,
+            self.index_finger_mcp_lm,
+            self.middle_finger_mcp_lm,
+            self.ring_finger_mcp_lm,
+            self.pinky_mcp_lm,
+            self.wrist_lm,
+        ], dtype="double")
+
+        self.draw = draw_axis
+
+        (success, rvec, tvec) = cv2.solvePnP(self.model_points, self.image_points,
+                                             self.camera_matrix, self.dist_coeffs)
+
+        if success:  # if the solvePnP succeed, compute the head pose, otherwise return None
+
+            rvec, tvec = cv2.solvePnPRefineVVS(
+                self.model_points, self.image_points, self.camera_matrix, self.dist_coeffs, rvec, tvec)
+            # this method is used to refine the rvec and tvec prediction
+
+            # knuckle (index_finger_mcp_lm) point on the image plane
+            knuckle = (int(self.image_points[1][0]), int(
+                self.image_points[1][1]))
+
+            (end_point2D, _) = cv2.projectPoints(
+                self.axis, rvec, tvec, self.camera_matrix, self.dist_coeffs)
+            Rmat = cv2.Rodrigues(rvec)[0]
+            # using the Rodrigues formula, this functions computes the Rotation Matrix from the rotation vector
+            P = np.hstack((Rmat, tvec))  # computing the projection matrix
+
+            euler_angles = cv2.decomposeProjectionMatrix(P)[6]
+            yaw, pitch, roll = euler_angles[0][0], euler_angles[1][0], euler_angles[2][0]
+
+        if self.draw:
+            self.frame = draw_pose_info(
+                self.frame, knuckle, end_point2D, yaw, pitch, roll)
+            # draws 3d axis from the nose and to the computed projection points
+            for point in self.image_points:
+                cv2.circle(self.frame, tuple(
+                    point.ravel().astype(int)), 2, (0, 255, 255), -1)
+            # draws the 6 keypoints used for the pose estimation
+            return self.frame, yaw, pitch, roll
+
+        else:
+            return self.frame, None, None, None
+
 
 # MAIN SCRIPT EXAMPLE FOR REAL-TIME HAND TRACKING USING A WEBCAM
-def main(camera_source=0, show_fps=True):
+def main(camera_source=0, show_fps=True, verbose=False):
+
+    # camera calibration parameters (example)
+    camera_matrix = np.array(
+        [[899.12150372, 0., 644.26261492],
+         [0., 899.45280671, 372.28009436],
+            [0, 0,  1]], dtype="double")
+
+    dist_coeffs = np.array(
+        [[-0.03792548, 0.09233237, 0.00419088, 0.00317323, -0.15804257]], dtype="double")
+
     ctime = 0  # current time (used to compute FPS)
     ptime = 0  # past time (used to compute FPS)
 
@@ -119,9 +260,12 @@ def main(camera_source=0, show_fps=True):
             frame, hand_num=0, draw=False)
         hand_3dlmlist = detector.findHand3DPosition()
 
-        if hand_lmlist != 0 and hand_3dlmlist != 0:
-            print(
-                f"hand keypoints:\n{hand_lmlist}\nhand 3d keypoints position:\n{hand_3dlmlist}")
+        if len(hand_lmlist) > 0 and len(hand_3dlmlist) > 0:
+            frame, yaw, pitch, roll = detector.findHandPose(
+                lmlist=hand_lmlist, lm3dlist=hand_3dlmlist, frame=frame, camera_matrix=camera_matrix, dist_coeffs=dist_coeffs)
+            if verbose:
+                print(
+                    f"hand keypoints:\n{hand_lmlist}\nhand 3d keypoints position:\n{hand_3dlmlist}")
 
         # compute the actual frame rate per second (FPS) of the webcam video capture stream, and show it
         ctime = time.time()
