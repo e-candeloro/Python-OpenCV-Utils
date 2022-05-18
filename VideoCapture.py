@@ -22,6 +22,8 @@ def videocapture(fps_cap=60, show_fps=True, source=0):
 
     time_lim = 1. / fps_lim  # time window for each frame taken by the webcam
 
+    cv2.setUseOptimized(True)  # enable OpenCV optimization
+
     # capture the input from the default system camera (camera number 0)
     cap = cv2.VideoCapture(source)
     if not cap.isOpened():  # if the camera can't be opened exit the program

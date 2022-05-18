@@ -94,6 +94,8 @@ def main(camera_source=0, show_fps=True):
     ctime = 0  # current time (used to compute FPS)
     ptime = 0  # past time (used to compute FPS)
 
+    cv2.setUseOptimized(True)
+
     # capture the input from the default system camera (camera number 0)
     cap = cv2.VideoCapture(camera_source)
     detector = HandDetector()
