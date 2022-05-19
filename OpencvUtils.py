@@ -3,6 +3,7 @@ import numpy as np
 
 # OPENCV
 
+
 def resize(frame, scale_percent):
     """
     Resize the image maintaining the aspect ratio
@@ -52,7 +53,6 @@ def draw_pose_info(frame, img_point, point_proj, roll=None, pitch=None, yaw=None
                     cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 1, cv2.LINE_AA)
 
     return frame
-
 
 
 # EULER ANGLES AND ROTATIONS MATRIX
