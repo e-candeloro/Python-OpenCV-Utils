@@ -348,4 +348,4 @@ def main(camera_source=0, show_fps=True, verbose=False):
 
 
 if __name__ == '__main__':
-    main(camera_source=1)
+    main(camera_source=1) #change this to zero if you don't have a usb webcam but an in-built camera
