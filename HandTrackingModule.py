@@ -94,7 +94,7 @@ class HandDetector():
         return lm3d_list
 
     # TO DO: fix pose estimation function...
-    def findHandPose(self, lmlist, lm3dlist, frame, camera_matrix=None, dist_coeffs=None, draw_axis=True, axis_scale=0.05):
+    def findHandPose(self, lmlist, lm3dlist, frame, camera_matrix=None, dist_coeffs=None, draw_axis=True, axis_scale=2):
         '''
         Estimate hand pose using the 2d and 3d keypoints of the hand.
 
@@ -146,6 +146,11 @@ class HandDetector():
             # take camera distortion coefficients
             self.dist_coeffs = dist_coeffs
 
+
+        #convert 3d points in meters to centimeters
+        for i, lm3d in enumerate(self.hand_3dlm):
+            self.hand_3dlm[i] = [i, lm3d[1:][0]
+                        * 100, lm3d[1:][1] * 100, lm3d[1:][2] * 100]
         # index,middle finger, ring finger, pinky and thumb keypoints in the image
         self.thumb_mcp_lm = tuple(self.hand_lm[1][1:])
         self.index_finger_mcp_lm = tuple(self.hand_lm[5][1:])
@@ -161,7 +166,7 @@ class HandDetector():
         self.index_finger_mcp_3dlm = tuple(self.hand_3dlm[5][1:])
         self.middle_finger_mcp_3dlm = tuple(self.hand_3dlm[9][1:])
         self.ring_finger_mcp_3dlm = tuple(self.hand_3dlm[13][1:])
-        self.pinky_mcp_3dlm = tuple(self.hand_3dlm[17][1:])
+        self.pinky_mcp_3dlm = tuple(self.hand_3dlm[17][1:] )
         self.wrist_3dlm = tuple(self.hand_3dlm[0][1:])
 
         # 3D hand keypoints in world space coordinates
@@ -171,7 +176,7 @@ class HandDetector():
             self.middle_finger_mcp_3dlm,
             self.ring_finger_mcp_3dlm,
             self.pinky_mcp_3dlm,
-            self.wrist_3dlm,
+            self.wrist_3dlm
         ], dtype="double")
 
         # 2D hand keypoints position in the image (frame)
@@ -181,13 +186,15 @@ class HandDetector():
             self.middle_finger_mcp_lm,
             self.ring_finger_mcp_lm,
             self.pinky_mcp_lm,
-            self.wrist_lm,
+            self.wrist_lm
         ], dtype="double")
 
         self.draw = draw_axis
 
         (success, rvec, tvec) = cv2.solvePnP(self.model_points, self.image_points,
-                                             self.camera_matrix, self.dist_coeffs)
+                                             self.camera_matrix, self.dist_coeffs,
+                                              flags=cv2.SOLVEPNP_ITERATIVE)
+                                            
 
         if success:  # if the solvePnP succeed, compute the head pose, otherwise return None
 
