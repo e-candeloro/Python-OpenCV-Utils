@@ -3,6 +3,8 @@ import cv2
 import numpy as np
 import time
 
+from sympy import det
+
 from OpencvUtils import draw_pose_info, rotationMatrixToEulerAngles
 
 
@@ -248,7 +250,7 @@ def main(camera_source=0, show_fps=True, verbose=False):
 
     # capture the input from the default system camera (camera number 0)
     cap = cv2.VideoCapture(camera_source)
-    detector = HandDetector()
+    detector = HandDetector(detCon=0.7, trackCon=0.7)
 
     if not cap.isOpened():  # if the camera can't be opened exit the program
         print("Cannot open camera")
