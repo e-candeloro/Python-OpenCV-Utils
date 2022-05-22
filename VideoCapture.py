@@ -32,7 +32,7 @@ def videocapture(fps_cap=60, show_fps=True, source=0):
 
     while True:  # infinite loop for webcam video capture
 
-        delta_time = time.time() - prev_time  # computed  delta time for FPS capping
+        delta_time = time.perf_counter() - prev_time  # computed  delta time for FPS capping
 
         ret, frame = cap.read()  # read a frame from the webcam
 
@@ -41,10 +41,10 @@ def videocapture(fps_cap=60, show_fps=True, source=0):
             break
 
         if delta_time >= time_lim:  # if the time passed is bigger or equal than the frame time, process the frame
-            prev_time = time.time()
+            prev_time = time.perf_counter()
 
             # compute the actual frame rate per second (FPS) of the webcam video capture stream, and show it
-            ctime = time.time()
+            ctime = time.perf_counter()
             fps = 1.0 / float(ctime - ptime)
             ptime = ctime
 
@@ -68,4 +68,6 @@ def videocapture(fps_cap=60, show_fps=True, source=0):
 
 
 if __name__ == '__main__':
-    videocapture()
+    videocapture(source=0)
+    
+
