@@ -11,7 +11,7 @@ Feel free to contribute 😎
 - PoseDetector module to track pose keypoints
 
 ## Showcase
-See the jupiter notebook included in this repo to see some code examples
+See the jupiter notebook included in this repo for some code examples
 
 ### Pose Keypoints
 Using the PoseDetectorModule.py
