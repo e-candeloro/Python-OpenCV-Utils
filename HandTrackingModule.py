@@ -1,9 +1,8 @@
 import mediapipe as mp
-import cv2
 import numpy as np
-import time
+import cv2
 
-from OpencvUtils import draw_pose_info
+import time
 
 
 class HandDetector():
@@ -211,7 +210,7 @@ class HandDetector():
             yaw, pitch, roll = euler_angles[0][0], euler_angles[1][0], euler_angles[2][0]
 
         if draw_axis:
-            frame = draw_pose_info(
+            frame = self.draw_pose_info(
                 frame, middle_palm_point, end_point2D, yaw=yaw, pitch=pitch, roll=roll)
             # draws 3d axis from the nose and to the computed projection points
             for point in self.image_points:
@@ -285,8 +284,44 @@ class HandDetector():
 
         return frame, aperture
 
-# MAIN SCRIPT EXAMPLE FOR REAL-TIME HAND TRACKING USING A WEBCAM
+    @staticmethod
+    def draw_pose_info(frame, img_point, point_proj, roll=None, pitch=None, yaw=None):
+        """
+        Draw 3d orthogonal axis given a frame, a point in the frame, the projection point array.
+        Also prints the information about the roll, pitch and yaw if passed
 
+        :param frame: opencv image/frame
+        :param img_point: tuple
+            x,y position in the image/frame for the 3d axis for the projection
+        :param point_proj: np.array
+            Projected point along 3 axis obtained from the cv2.projectPoints function
+        :param roll: float, optional
+        :param pitch: float, optional
+        :param yaw: float, optional
+        :return: frame: opencv image/frame
+            Frame with 3d axis drawn and, optionally, the roll,pitch and yaw values drawn
+        """
+        frame = cv2.line(frame, img_point, tuple(
+            point_proj[0].ravel().astype(int)), (255, 0, 0), 3)
+        frame = cv2.line(frame, img_point, tuple(
+            point_proj[1].ravel().astype(int)), (0, 255, 0), 3)
+        frame = cv2.line(frame, img_point, tuple(
+            point_proj[2].ravel().astype(int)), (0, 0, 255), 3)
+
+        if roll is not None and pitch is not None and yaw is not None:
+            cv2.putText(frame, "Roll:" + str(np.round(roll, 1)), (500, 50),
+                        cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(frame, "Pitch:" + str(np.round(pitch, 1)), (500, 70),
+                        cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(frame, "Yaw:" + str(np.round(yaw, 1)), (500, 90),
+                        cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 1, cv2.LINE_AA)
+
+        return frame
+
+
+# ---------------------------------------------------------------
+# MAIN SCRIPT EXAMPLE FOR REAL-TIME HAND TRACKING USING A WEBCAM
+# ---------------------------------------------------------------
 
 def main(camera_source=0, show_fps=True, verbose=False):
 
