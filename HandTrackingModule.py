@@ -28,17 +28,14 @@ class HandDetector():
         :param: draw (boolean, draw the keypoint if set to true, default is true)
         :returns: img (opencv image in BGR with keypoints drawn if draw is set to true)
         '''
-        h, w, c = frame.shape
         imgRGB = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         self.results = self.hands.process(imgRGB)
 
         if self.results.multi_hand_landmarks:
             for handLMs in self.results.multi_hand_landmarks:
-                for id_point, lm in enumerate(handLMs.landmark):
-                    cx, cy = int(lm.x * w), int(lm.y * h)
-            if draw:
-                self.mpDraw.draw_landmarks(frame, handLMs,
-                                           self.mpHands.HAND_CONNECTIONS)
+                if draw:
+                    self.mpDraw.draw_landmarks(frame, handLMs,
+                                               self.mpHands.HAND_CONNECTIONS)
         return frame
 
     def findHandPosition(self, frame, hand_num=0, draw=True):
@@ -326,7 +323,7 @@ class HandDetector():
 def main(camera_source=0, show_fps=True, verbose=False):
 
     assert camera_source >= 0, f"source needs to be greater or equal than 0\n"
-    
+
     # camera calibration parameters (example)
     camera_matrix = np.array(
         [[899.12150372, 0., 644.26261492],
