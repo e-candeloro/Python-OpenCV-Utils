@@ -10,9 +10,16 @@ Feel free to contribute 😎
 - HandTracker module to track hand keypoints and compute useful metrics like keypoints position and hand aperture
 
 ## Showcase
-See the example notebook for code examples and showcases
+See the jupiter notebook included in this repo to see some code examples
+
+### Pose Keypoints
+Using the PoseDetectorModule.py
+
+https://user-images.githubusercontent.com/67196406/169710056-bd5bb5d5-15fe-47d9-98a5-a52a90403ada.mp4
+
 
 ### Hand Keypoints and Aperture
+Using the HandTrackingModule.py
 
 https://user-images.githubusercontent.com/67196406/169382148-e88d7cbb-b5ee-46ce-807f-32a89e8188dc.mp4
 
