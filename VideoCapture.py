@@ -8,11 +8,16 @@ def videocapture(fps_cap=60, show_fps=True, source=0):
     It's possible to cap/limit the number of FPS using the "fps_cap" variable (default is 60) and to show the actual FPS footage (shown by default).
     The program stops if "q" is pressed or there is an error in opening/using the capture source.
 
-    :param: fps_cap - max framerate allowed (default is 60)
-    :param: show_fps - shows a real-time framerate indicator (default is True)
-    :param: source - select the webcam source number used in OpenCV (default is 0)
+    :param: fps_cap (int)
+        max framerate allowed (default is 60)
+    :param: show_fps (bool)
+        shows a real-time framerate indicator (default is True)
+    :param: source (int)
+        select the webcam source number used in OpenCV (default is 0)
 
     """
+    assert fps_cap >= 1, f"fps_cap should be at least 1\n"
+    assert source >= 0, f"source needs to be greater or equal than 0\n"
 
     ctime = 0  # current time (used to compute FPS)
     ptime = 0  # past time (used to compute FPS)
@@ -32,7 +37,8 @@ def videocapture(fps_cap=60, show_fps=True, source=0):
 
     while True:  # infinite loop for webcam video capture
 
-        delta_time = time.perf_counter() - prev_time  # computed  delta time for FPS capping
+        # computed  delta time for FPS capping
+        delta_time = time.perf_counter() - prev_time
 
         ret, frame = cap.read()  # read a frame from the webcam
 
@@ -69,5 +75,3 @@ def videocapture(fps_cap=60, show_fps=True, source=0):
 
 if __name__ == '__main__':
     videocapture(source=0)
-    
-

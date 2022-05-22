@@ -325,6 +325,8 @@ class HandDetector():
 
 def main(camera_source=0, show_fps=True, verbose=False):
 
+    assert camera_source >= 0, f"source needs to be greater or equal than 0\n"
+    
     # camera calibration parameters (example)
     camera_matrix = np.array(
         [[899.12150372, 0., 644.26261492],
