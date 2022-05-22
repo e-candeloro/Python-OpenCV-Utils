@@ -6,8 +6,9 @@ Feel free to contribute 😎
 
 ## Implemented functions
 - Euler Angles to Rotation Matrix and vice-versa
-- Some OpenCV utility functions like resize img maintaining the ratio of the image
+- Some OpenCV utility functions (image resizing, dlib keypoints processing, ...)
 - HandTracker module to track hand keypoints and compute useful metrics like keypoints position and hand aperture
+- PoseDetector module to track pose keypoints
 
 ## Showcase
 See the jupiter notebook included in this repo to see some code examples
