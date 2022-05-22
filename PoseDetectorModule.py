@@ -75,6 +75,52 @@ class poseDetector():
 
         return self.lm_list
 
+    def findAngle(self, frame, p1, p2, p3, flip_angle = False,draw=True):
+        '''Find the angle between 3 points p1, p2, p3 in succession, where p2 is the point where the angle is measured.
+        For the points, only the index number is required. Please refer to this image to select the appriopriate keypoints: https://google.github.io/mediapipe/images/mobile/pose_tracking_full_body_landmarks.png
+
+        Example: elbow angle, given the shoulder keypoint, the elbow keypoint and the wrist keypoint
+
+        :param: frame (opencv frame)
+        :p1:first point index
+        :p2:second point index
+        :p3:third point index
+        :flip_angle: Bool: flips the angle computation
+        :draw: Bool (optional): draws additional info, default is True
+
+        Returns:
+            -angle: angle in degrees between the segment s12 and the segment s23 having p2 as vertex, where the angle is located
+        '''
+        # checks if keypoints values are correct
+        assert p1 >= 0 and p1 <= 32, f"p1 must be >=0 and <=32"
+        assert p2 >= 0 and p2 <= 32, f"p2 must be >=0 and <=32"
+        assert p3 >= 0 and p3 <= 32, f"p3 must be >=0 and <=32"
+
+        if len(self.lm_list) > 0:
+            x1, y1 = self.lm_list[p1][1:3]
+            x2, y2 = self.lm_list[p2][1:3]
+            x3, y3 = self.lm_list[p3][1:3]
+        else:
+            return None
+        
+        if flip_angle:
+            flipped = -1
+        else:
+            flipped = 1
+
+        angle = np.degrees((flipped)*np.arctan2(y3 - y2, x3 - x2) - 1*(flipped)*np.arctan2(y1 - y2, x1 - x2))
+
+        if angle < 0:
+            angle += 360
+
+        if draw:
+            cv2.circle(frame, (x2, y2), 5, (255, 0, 255), -1)
+            cv2.circle(frame, (x2, y2), 10, (255, 0, 255), 1)
+            cv2.putText(frame, str(round(angle, 0)), (x2 - 50, y2 + 50),
+                        cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 2, cv2.LINE_AA)
+
+        return angle
+
 # ---------------------------------------------------------------
 # MAIN SCRIPT EXAMPLE FOR REAL-TIME POSE TRACKING USING A WEBCAM
 # ---------------------------------------------------------------
@@ -83,7 +129,6 @@ class poseDetector():
 def main(camera_source=0, show_fps=True, verbose=False):
 
     assert camera_source >= 0, f"source needs to be greater or equal than 0\n"
-
 
     ctime = 0  # current time (used to compute FPS)
     ptime = 0  # past time (used to compute FPS)
@@ -109,7 +154,9 @@ def main(camera_source=0, show_fps=True, verbose=False):
         frame = detector.findPose(frame=frame)
         lm_list = detector.findPosePosition(
             frame, additional_info=True, draw=True)
-        
+
+        if len(lm_list) > 0:
+            angle = detector.findAngle(frame, 12, 14, 16,flip_angle=True,draw=True)
         # compute the actual frame rate per second (FPS) of the webcam video capture stream, and show it
         ctime = time.perf_counter()
         fps = 1.0 / float(ctime - ptime)
