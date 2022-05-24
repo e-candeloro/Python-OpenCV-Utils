@@ -416,7 +416,6 @@ def main(camera_source=0, show_fps=True, verbose=False):
                 frame, 12, 14, 16, flip_angle=True, draw=True) """
 
             angle_3d = detector.find3DAngle(frame, 12, 14, 16, draw=True)
-            print(angle_3d)
             """ frame, yaw, pitch, roll = detector.findBody3DPose(
                 frame, draw_axis=True, axis_scale=2) """
 
@@ -444,4 +443,4 @@ def main(camera_source=0, show_fps=True, verbose=False):
 
 if __name__ == '__main__':
     # change this to zero if you don't have a usb webcam but an in-built camera
-    main(camera_source=0)
+    main(camera_source=1)
