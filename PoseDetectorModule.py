@@ -194,6 +194,53 @@ class poseDetector():
 
         return angle
 
+    def find3DAngle(self, frame, p1, p2, p3, draw=True):
+        '''Find the angle between 3 3d keypoints p1, p2, p3 in succession, where p2 is the point where the angle is measured.
+        For the points, only the index number is required. Please refer to this image to select the appriopriate keypoints: https://google.github.io/mediapipe/images/mobile/pose_tracking_full_body_landmarks.png
+
+        Example: elbow angle, given the shoulder keypoint, the elbow keypoint and the wrist keypoint
+
+        :param: frame (opencv frame)
+        :p1:first point index
+        :p2:second point index
+        :p3:third point index
+        :flip_angle: Bool: flips the angle computation
+        :draw: Bool (optional): draws additional info, default is True
+
+        Returns:
+            -angle: angle in degrees between the segment s12 and the segment s23 having p2 as vertex, where the angle is located
+        '''
+        # checks if keypoints values are correct
+        assert p1 >= 0 and p1 <= 32, f"p1 must be >=0 and <=32"
+        assert p2 >= 0 and p2 <= 32, f"p2 must be >=0 and <=32"
+        assert p3 >= 0 and p3 <= 32, f"p3 must be >=0 and <=32"
+
+        if len(self.lm_3dlist) > 0:
+            x1, y1, z1 = self.lm_3dlist[p1][1:4]
+            x2, y2, z2 = self.lm_3dlist[p2][1:4]
+            x3, y3, z3 = self.lm_3dlist[p3][1:4]
+        else:
+            return None
+
+        v21 = np.array([x2 - x1, y2 - y1, z2 - z1]) * 100
+        v32 = np.array([x3 - x2, y3 - y2, z3 - z2]) * 100
+
+        angle = np.degrees(
+            np.arccos(
+                np.dot(v21, v32)/(np.linalg.norm(v21, 2)
+                                  * np.linalg.norm(v32, 2))
+            )
+        )
+
+        if draw:
+            cx, cy = self.lm_list[p2][1:3]
+            cv2.circle(frame, (cx, cy), 5, (255, 0, 255), -1)
+            cv2.circle(frame, (cx, cy), 10, (255, 0, 255), 1)
+            cv2.putText(frame, str(round(angle, 0)), (cx - 50, cy + 50),
+                        cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 2, cv2.LINE_AA)
+
+        return angle
+
     # TODO: improve pose estimation function
 
     def findBody3DPose(self, frame, camera_matrix=None, dist_coeffs=None, draw_axis=True, axis_scale=2):
@@ -259,7 +306,6 @@ class poseDetector():
         self.right_shoulder_lm = tuple(self.pose_lm[12][1:3])
         self.left_hip_lm = tuple(self.pose_lm[23][1:3])
         self.right_hip_lm = tuple(self.pose_lm[24][1:3])
-        
 
         #  # left and right shoulders, left and right hips, left and right knee 3d keypoints
         # estimated position in world space coordinates
@@ -270,7 +316,6 @@ class poseDetector():
         self.right_shoulder_3dlm = tuple(self.pose_3dlm[12][1:4])
         self.left_hip_3dlm = tuple(self.pose_3dlm[23][1:4])
         self.right_hip_3dlm = tuple(self.pose_3dlm[24][1:4])
-        
 
         # 3D hand keypoints in world space coordinates
         self.model_points = np.array([
@@ -280,7 +325,7 @@ class poseDetector():
             self.right_shoulder_3dlm,
             self.left_hip_3dlm,
             self.right_hip_3dlm,
-            
+
         ], dtype="double")
 
         # 2D keypoints position in the image (frame)
@@ -367,11 +412,14 @@ def main(camera_source=0, show_fps=True, verbose=False):
         lm_3dlist = detector.find3DPosePosition()
 
         if len(lm_list) > 0 and len(lm_3dlist) > 0:
-            angle = detector.findAngle(
-                frame, 12, 14, 16, flip_angle=True, draw=True)
+            """ angle = detector.findAngle(
+                frame, 12, 14, 16, flip_angle=True, draw=True) """
+
+            angle_3d = detector.find3DAngle(frame, 12, 14, 16, draw=True)
+            print(angle_3d)
             """ frame, yaw, pitch, roll = detector.findBody3DPose(
                 frame, draw_axis=True, axis_scale=2) """
-                
+
         # compute the actual frame rate per second (FPS) of the webcam video capture stream, and show it
         ctime = time.perf_counter()
         fps = 1.0 / float(ctime - ptime)
@@ -396,4 +444,4 @@ def main(camera_source=0, show_fps=True, verbose=False):
 
 if __name__ == '__main__':
     # change this to zero if you don't have a usb webcam but an in-built camera
-    main(camera_source=1)
+    main(camera_source=0)
