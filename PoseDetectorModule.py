@@ -147,7 +147,7 @@ class poseDetector():
 
         return self.lm_3dlist
 
-    def findAngle(self, frame, p1, p2, p3, flip_angle=False, draw=True):
+    def findAngle(self, frame, p1: int, p2: int, p3: int, angle3d=False, draw=True):
         '''Find the angle between 3 points p1, p2, p3 in succession, where p2 is the point where the angle is measured.
         For the points, only the index number is required. Please refer to this image to select the appriopriate keypoints: https://google.github.io/mediapipe/images/mobile/pose_tracking_full_body_landmarks.png
 
@@ -157,7 +157,8 @@ class poseDetector():
         :p1:first point index
         :p2:second point index
         :p3:third point index
-        :flip_angle: Bool: flips the angle computation
+        :angle3d: Bool: performs 3d angle computation, default is False
+        :flip_2dangle: Bool: flips the angle computation if it is in 2d, default is False
         :draw: Bool (optional): draws additional info, default is True
 
         Returns:
@@ -167,63 +168,28 @@ class poseDetector():
         assert p1 >= 0 and p1 <= 32, f"p1 must be >=0 and <=32"
         assert p2 >= 0 and p2 <= 32, f"p2 must be >=0 and <=32"
         assert p3 >= 0 and p3 <= 32, f"p3 must be >=0 and <=32"
+        assert len(
+            self.lm_list) > 0, f"Landmark list is empty, use this function only after using the FindPose and FindPosePosition methods"
+        assert len(
+            self.lm_3dlist) > 0, f"3D Landmark list is empty, use this function only after using the FindPose and Find3DPosePosition methods"
 
-        if len(self.lm_list) > 0:
-            x1, y1 = self.lm_list[p1][1:3]
-            x2, y2 = self.lm_list[p2][1:3]
-            x3, y3 = self.lm_list[p3][1:3]
-        else:
-            return None
+        if angle3d:
 
-        if flip_angle:
-            flipped = -1
-        else:
-            flipped = 1
-
-        angle = np.degrees((flipped)*np.arctan2(y3 - y2, x3 - x2) -
-                           1*(flipped)*np.arctan2(y1 - y2, x1 - x2))
-
-        if angle < 0:
-            angle += 360
-
-        if draw:
-            cv2.circle(frame, (x2, y2), 5, (255, 0, 255), -1)
-            cv2.circle(frame, (x2, y2), 10, (255, 0, 255), 1)
-            cv2.putText(frame, str(round(angle, 0)), (x2 - 50, y2 + 50),
-                        cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 2, cv2.LINE_AA)
-
-        return angle
-
-    def find3DAngle(self, frame, p1, p2, p3, draw=True):
-        '''Find the angle between 3 3d keypoints p1, p2, p3 in succession, where p2 is the point where the angle is measured.
-        For the points, only the index number is required. Please refer to this image to select the appriopriate keypoints: https://google.github.io/mediapipe/images/mobile/pose_tracking_full_body_landmarks.png
-
-        Example: elbow angle, given the shoulder keypoint, the elbow keypoint and the wrist keypoint
-
-        :param: frame (opencv frame)
-        :p1:first point index
-        :p2:second point index
-        :p3:third point index
-        :flip_angle: Bool: flips the angle computation
-        :draw: Bool (optional): draws additional info, default is True
-
-        Returns:
-            -angle: angle in degrees between the segment s12 and the segment s23 having p2 as vertex, where the angle is located
-        '''
-        # checks if keypoints values are correct
-        assert p1 >= 0 and p1 <= 32, f"p1 must be >=0 and <=32"
-        assert p2 >= 0 and p2 <= 32, f"p2 must be >=0 and <=32"
-        assert p3 >= 0 and p3 <= 32, f"p3 must be >=0 and <=32"
-
-        if len(self.lm_3dlist) > 0:
             x1, y1, z1 = self.lm_3dlist[p1][1:4]
             x2, y2, z2 = self.lm_3dlist[p2][1:4]
             x3, y3, z3 = self.lm_3dlist[p3][1:4]
-        else:
-            return None
 
-        v21 = np.array([x2 - x1, y2 - y1, z2 - z1]) * 100
-        v32 = np.array([x3 - x2, y3 - y2, z3 - z2]) * 100
+            v21 = np.array([x1 - x2, y1 - y2, z1 - z2]) * 100
+            v32 = np.array([x3 - x2, y3 - y2, z3 - z2]) * 100
+
+        else:
+
+            x1, y1 = self.lm_list[p1][1:3]
+            x2, y2 = self.lm_list[p2][1:3]
+            x3, y3 = self.lm_list[p3][1:3]
+
+            v21 = np.array([x1 - x2, y1 - y2]) * 100
+            v32 = np.array([x3 - x2, y3 - y2]) * 100
 
         angle = np.degrees(
             np.arccos(
@@ -392,7 +358,7 @@ def main(camera_source=0, show_fps=True, verbose=False):
 
     # capture the input from the default system camera (camera number 0)
     cap = cv2.VideoCapture(camera_source)
-    detector = poseDetector(detCon=0.7, trackCon=0.7)
+    detector = poseDetector(detCon=0.7, trackCon=0.7, modCompl=1)
 
     if not cap.isOpened():  # if the camera can't be opened exit the program
         print("Cannot open camera")
@@ -415,7 +381,8 @@ def main(camera_source=0, show_fps=True, verbose=False):
             """ angle = detector.findAngle(
                 frame, 12, 14, 16, flip_angle=True, draw=True) """
 
-            angle_3d = detector.find3DAngle(frame, 12, 14, 16, draw=True)
+            angle_3d = detector.findAngle(
+                frame, 12, 14, 16, angle3d=True, draw=True)
             """ frame, yaw, pitch, roll = detector.findBody3DPose(
                 frame, draw_axis=True, axis_scale=2) """
 
@@ -443,4 +410,4 @@ def main(camera_source=0, show_fps=True, verbose=False):
 
 if __name__ == '__main__':
     # change this to zero if you don't have a usb webcam but an in-built camera
-    main(camera_source=1)
+    main(camera_source=0)
