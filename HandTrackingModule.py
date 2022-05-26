@@ -219,7 +219,7 @@ class HandDetector():
         else:
             return frame, None, None, None
 
-    def findHandAperture(self, frame, verbose=False, show_aperture=True):
+    def findHandAperture(self, frame, verbose=False, show_aperture=True, aperture_range:list = [0.4, 1.7]):
         '''
         Finds the normalized hand aperture as distance between the mean point of the hand tips and the mean wrist and thumb base point divided by the palm lenght.
 
@@ -231,6 +231,9 @@ class HandDetector():
             If set to True, prints the hand aperture value on the frame (default is False)
         show_aperture: bool
             If set to True, show the hand aperture with a line
+        aperture_range: list of 2 floats containing the min aperture and max aperture to remap from 0 to 1
+        
+        default: [0.3, 1.8] gets remapped to [0, 1] 
 
         Returns
         --------
@@ -269,17 +272,19 @@ class HandDetector():
 
         # compute hand aperture as l2norm between hand tips midpoint and lower palm midpoint
         # normalize by palm size computed before
-        aperture = np.round(np.linalg.norm(
-            tips_midpoint_array - lower_palm_midpoint_array, ord=2)/palm_size, 3)
+        aperture = np.linalg.norm(
+            tips_midpoint_array - lower_palm_midpoint_array, ord=2)/palm_size
+
+        aperture_norm = np.round(np.interp(aperture, aperture_range, [0, 100]),1)
 
         if verbose:
-            cv2.putText(frame, "HAND APERTURE:" + str(aperture), (10, 40),
+            cv2.putText(frame, "HAND APERTURE:" + str(aperture_norm), (10, 40),
                         cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 1, cv2.LINE_AA)
         if show_aperture:
             frame = cv2.line(frame, tuple(tips_midpoint_array.astype(int)),
                              tuple(lower_palm_midpoint_array.astype(int)), (255, 0, 0), 3)
 
-        return frame, aperture
+        return frame, aperture_norm
 
     @staticmethod
     def draw_pose_info(frame, img_point, point_proj, roll=None, pitch=None, yaw=None):
