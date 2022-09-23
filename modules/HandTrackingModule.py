@@ -1,4 +1,5 @@
 import mediapipe as mp
+import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 
@@ -7,6 +8,19 @@ import time
 
 class HandDetector():
     def __init__(self, mode=False, maxHands=1, modCompl=1, detCon=0.5, trackCon=0.5):
+        """Hand detector class that is used to detect the hand keypoints.
+
+        Args:
+            mode (bool, optional): If set to false, the solution treats the input images as a video stream. It will try to detect hands in the first input images, and upon a successful detection further localizes the hand landmarks. In subsequent images, once all max_num_hands hands are detected and the corresponding hand landmarks are localized, it simply tracks those landmarks without invoking another detection until it loses track of any of the hands. This reduces latency and is ideal for processing video frames. If set to true, hand detection runs on every input image, ideal for processing a batch of static, possibly unrelated, images. Default to false.
+            
+            maxHands (int, optional): Maximum number of hands to detect. Default to 1.
+            
+            modCompl (int, optional): Complexity of the hand landmark model: 0 or 1. Landmark accuracy as well as inference latency generally go up with the model complexity. Default to 1.
+            
+            detCon (float, optional): Minimum confidence value ([0.0, 1.0]) from the hand detection model for the detection to be considered successful. Default to 0.5.
+            
+            trackCon (float, optional): Minimum confidence value ([0.0, 1.0]) from the landmark-tracking model for the hand landmarks to be considered tracked successfully, or otherwise hand detection will be invoked automatically on the next input image. Setting it to a higher value can increase robustness of the solution, at the expense of a higher latency. Ignored if static_image_mode is true, where hand detection simply runs on every image. Default to 0.5.
+        """
         self.mode = mode  # static image mode,
         self.maxHands = maxHands  # max number of hands to track
         self.modCompl = modCompl  # complexity of the model (can be 0 or 1)
@@ -21,13 +35,25 @@ class HandDetector():
                                         min_tracking_confidence=self.trackCon)
         self.mpDraw = mp.solutions.drawing_utils
 
-    def findHands(self, frame, draw=True):
+    def findHands(self, frame, draw=True, return_handedness=False):
+        """ Detects the hands in the input image.
+
+        Args:
+            frame (OpenCV BGR image): Input image.
+            draw (bool, optional): If set to true, draw the hand(s) keypoints and connections. Defaults to True.
+            return_handedness (bool, optional): Returns the list of score and label for right handedness.ATTENTION: if the input image is not flipped, returns the label Right for the left hand and vice-versa!!!. Defaults to False.
+
+        Returns:
+            frame:  opencv image in BGR with keypoints drawn if draw is set to true
+            right_handedness (optional): list of scores and labels for hand handedness.
+        """
         '''
         Detects the hands and draws keypoints of the hands given and input image.
         :param: img (opencv image in BGR)
         :param: draw (boolean, draw the keypoint if set to true, default is true)
         :returns: img (opencv image in BGR with keypoints drawn if draw is set to true)
         '''
+        
         imgRGB = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         self.results = self.hands.process(imgRGB)
 
@@ -36,7 +62,11 @@ class HandDetector():
                 if draw:
                     self.mpDraw.draw_landmarks(frame, handLMs,
                                                self.mpHands.HAND_CONNECTIONS)
-        return frame
+        
+        if return_handedness:
+            return frame, self.results.multi_handedness
+        else:
+            return frame
 
     def findHandPosition(self, frame, hand_num=0, draw=True):
         '''
@@ -89,137 +119,7 @@ class HandDetector():
                     hand3d, self.mpHands.HAND_CONNECTIONS, azimuth=5)
         return self.lm3d_list
 
-    # TO DO: fix pose estimation function...
-    def findHandPose(self, frame, camera_matrix=None, dist_coeffs=None, draw_axis=True, axis_scale=2):
-        '''
-        Estimate hand pose using the 2d and 3d keypoints of the hand.
-
-        Parameters
-        ----------
-        frame: opencv image array
-            contains frame to be processed
-        draw_axis: bool
-            If set to True, shows the head pose axis projected from the keypoints
-            used for pose estimation (default is True)
-        camera_matrix: np.array 
-            matrix of the camera parameters (default is None)
-        dist_coeffs: np.array
-            array of distorsion coefficients of the camera (default is None)
-
-        Returns
-        --------
-        - if successful: image_frame, yaw, pitch, roll (tuple)
-        - if unsuccessful: None,None,None,None (tuple)
-
-        '''
-
-        self.hand_lm = self.lm_list
-        self.hand_3dlm = self.lm3d_list
-
-        self.axis = np.float32([[axis_scale, 0, 0],
-                                [0, axis_scale, 0],
-                                [0, 0, axis_scale]])
-        # array that specify the length of the 3 projected axis from the nose
-
-        if camera_matrix is None:
-            # if no camera matrix is given, estimate camera parameters using picture size
-            size = frame.shape
-            focal_length = size[1]
-            center = (size[1] / 2, size[0] / 2)
-            self.camera_matrix = np.array(
-                [[focal_length, 0, center[0]],
-                 [0, focal_length, center[1]],
-                 [0, 0, 1]], dtype="double"
-            )
-        else:
-            # take camera matrix
-            self.camera_matrix = camera_matrix
-
-        if dist_coeffs is None:  # if no distorsion coefficients are given, assume no lens distortion
-            self.dist_coeffs = np.zeros((4, 1))
-        else:
-            # take camera distortion coefficients
-            self.dist_coeffs = dist_coeffs
-
-        # convert 3d points in meters to centimeters
-        for i, lm3d in enumerate(self.hand_3dlm):
-            self.hand_3dlm[i] = [i, lm3d[1:][0]
-                                 * 100, lm3d[1:][1] * 100, lm3d[1:][2] * 100]
-        # index,middle finger, ring finger, pinky and thumb keypoints in the image
-        self.thumb_mcp_lm = tuple(self.hand_lm[1][1:])
-        self.index_finger_mcp_lm = tuple(self.hand_lm[5][1:])
-        self.middle_finger_mcp_lm = tuple(self.hand_lm[9][1:])
-        self.ring_finger_mcp_lm = tuple(self.hand_lm[13][1:])
-        self.pinky_mcp_lm = tuple(self.hand_lm[17][1:])
-        self.wrist_lm = tuple(self.hand_lm[0][1:])
-
-        # index,middle finger, ring finger, pinky and thumb 3d
-        # estimated position in world space coordinates
-
-        self.thumb_mcp_3dlm = tuple(self.hand_3dlm[1][1:])
-        self.index_finger_mcp_3dlm = tuple(self.hand_3dlm[5][1:])
-        self.middle_finger_mcp_3dlm = tuple(self.hand_3dlm[9][1:])
-        self.ring_finger_mcp_3dlm = tuple(self.hand_3dlm[13][1:])
-        self.pinky_mcp_3dlm = tuple(self.hand_3dlm[17][1:])
-        self.wrist_3dlm = tuple(self.hand_3dlm[0][1:])
-
-        # 3D hand keypoints in world space coordinates
-        self.model_points = np.array([
-            self.thumb_mcp_3dlm,
-            self.index_finger_mcp_3dlm,
-            self.middle_finger_mcp_3dlm,
-            self.ring_finger_mcp_3dlm,
-            self.pinky_mcp_3dlm,
-            self.wrist_3dlm
-        ], dtype="double")
-
-        # 2D hand keypoints position in the image (frame)
-        self.image_points = np.array([
-            self.thumb_mcp_lm,
-            self.index_finger_mcp_lm,
-            self.middle_finger_mcp_lm,
-            self.ring_finger_mcp_lm,
-            self.pinky_mcp_lm,
-            self.wrist_lm
-        ], dtype="double")
-
-        (success, rvec, tvec) = cv2.solvePnP(self.model_points, self.image_points,
-                                             self.camera_matrix, self.dist_coeffs,
-                                             flags=cv2.SOLVEPNP_ITERATIVE)
-
-        if success:  # if the solvePnP succeed, compute the head pose, otherwise return None
-
-            rvec, tvec = cv2.solvePnPRefineVVS(
-                self.model_points, self.image_points, self.camera_matrix, self.dist_coeffs, rvec, tvec)
-            # this method is used to refine the rvec and tvec prediction
-
-            # middle palm point
-            middle_palm_point = (int((self.image_points[1][0] + self.image_points[4][0] + self.image_points[5][0])/3), int(
-                (self.image_points[1][1] + self.image_points[4][1] + self.image_points[5][1])/3))
-
-            (end_point2D, _) = cv2.projectPoints(
-                self.axis, rvec, tvec, self.camera_matrix, self.dist_coeffs)
-            Rmat = cv2.Rodrigues(rvec)[0]
-            # using the Rodrigues formula, this functions computes the Rotation Matrix from the rotation vector
-            P = np.hstack((Rmat, tvec))  # computing the projection matrix
-
-            euler_angles = cv2.decomposeProjectionMatrix(P)[6]
-            yaw, pitch, roll = euler_angles[0][0], euler_angles[1][0], euler_angles[2][0]
-
-        if draw_axis:
-            frame = self.draw_pose_info(
-                frame, middle_palm_point, end_point2D, yaw=yaw, pitch=pitch, roll=roll)
-            # draws 3d axis from the nose and to the computed projection points
-            for point in self.image_points:
-                cv2.circle(frame, tuple(
-                    point.ravel().astype(int)), 2, (0, 255, 255), -1)
-            # draws the 6 keypoints used for the pose estimation
-            return frame, yaw, pitch, roll
-
-        else:
-            return frame, None, None, None
-
-    def findHandAperture(self, frame, verbose=False, show_aperture=True, aperture_range:list = [0.4, 1.7]):
+    def findHandAperture(self, frame, verbose=False, show_aperture=True, aperture_range: list = [0.4, 1.7]):
         '''
         Finds the normalized hand aperture as distance between the mean point of the hand tips and the mean wrist and thumb base point divided by the palm lenght.
 
@@ -232,8 +132,8 @@ class HandDetector():
         show_aperture: bool
             If set to True, show the hand aperture with a line
         aperture_range: list of 2 floats containing the min aperture and max aperture to remap from 0 to 1
-        
-        default: [0.3, 1.8] gets remapped to [0, 1] 
+
+        default: [0.4, 1.7] gets remapped to [0, 1] 
 
         Returns
         --------
@@ -275,7 +175,8 @@ class HandDetector():
         aperture = np.linalg.norm(
             tips_midpoint_array - lower_palm_midpoint_array, ord=2)/palm_size
 
-        aperture_norm = np.round(np.interp(aperture, aperture_range, [0, 100]),1)
+        aperture_norm = np.round(
+            np.interp(aperture, aperture_range, [0, 100]), 1)
 
         if verbose:
             cv2.putText(frame, "HAND APERTURE:" + str(aperture_norm), (10, 40),
@@ -286,41 +187,6 @@ class HandDetector():
 
         return frame, aperture_norm
 
-    @staticmethod
-    def draw_pose_info(frame, img_point, point_proj, roll=None, pitch=None, yaw=None):
-        """
-        Draw 3d orthogonal axis given a frame, a point in the frame, the projection point array.
-        Also prints the information about the roll, pitch and yaw if passed
-
-        :param frame: opencv image/frame
-        :param img_point: tuple
-            x,y position in the image/frame for the 3d axis for the projection
-        :param point_proj: np.array
-            Projected point along 3 axis obtained from the cv2.projectPoints function
-        :param roll: float, optional
-        :param pitch: float, optional
-        :param yaw: float, optional
-        :return: frame: opencv image/frame
-            Frame with 3d axis drawn and, optionally, the roll,pitch and yaw values drawn
-        """
-        frame = cv2.line(frame, img_point, tuple(
-            point_proj[0].ravel().astype(int)), (255, 0, 0), 3)
-        frame = cv2.line(frame, img_point, tuple(
-            point_proj[1].ravel().astype(int)), (0, 255, 0), 3)
-        frame = cv2.line(frame, img_point, tuple(
-            point_proj[2].ravel().astype(int)), (0, 0, 255), 3)
-
-        if roll is not None and pitch is not None and yaw is not None:
-            cv2.putText(frame, "Roll:" + str(np.round(roll, 1)), (500, 50),
-                        cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 1, cv2.LINE_AA)
-            cv2.putText(frame, "Pitch:" + str(np.round(pitch, 1)), (500, 70),
-                        cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 1, cv2.LINE_AA)
-            cv2.putText(frame, "Yaw:" + str(np.round(yaw, 1)), (500, 90),
-                        cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 1, cv2.LINE_AA)
-
-        return frame
-
-
 # ---------------------------------------------------------------
 # MAIN SCRIPT EXAMPLE FOR REAL-TIME HAND TRACKING USING A WEBCAM
 # ---------------------------------------------------------------
@@ -328,15 +194,6 @@ class HandDetector():
 def main(camera_source=0, show_fps=True, verbose=False):
 
     assert camera_source >= 0, f"source needs to be greater or equal than 0\n"
-
-    # camera calibration parameters (example)
-    camera_matrix = np.array(
-        [[899.12150372, 0., 644.26261492],
-         [0., 899.45280671, 372.28009436],
-            [0, 0,  1]], dtype="double")
-
-    dist_coeffs = np.array(
-        [[-0.03792548, 0.09233237, 0.00419088, 0.00317323, -0.15804257]], dtype="double")
 
     ctime = 0  # current time (used to compute FPS)
     ptime = 0  # past time (used to compute FPS)
@@ -359,17 +216,9 @@ def main(camera_source=0, show_fps=True, verbose=False):
             print("Can't receive frame from camera/stream end")
             break
 
-        frame = detector.findHands(frame=frame)
+        frame, handness_list = detector.findHands(frame=frame, return_handedness=True)
         hand_lmlist, frame = detector.findHandPosition(
             frame=frame, hand_num=0, draw=False)
-        # hand_3dlmlist = detector.findHand3DPosition()
-
-        """ if len(hand_lmlist) > 0 and len(hand_3dlmlist) > 0:
-            frame, yaw, pitch, roll = detector.findHandPose(
-                lmlist=hand_lmlist, lm3dlist=hand_3dlmlist, frame=frame)
-            if verbose:
-                print(
-                    f"hand keypoints:\n{hand_lmlist}\nhand 3d keypoints position:\n{hand_3dlmlist}") """
 
         if len(hand_lmlist) > 0:
             frame, aperture = detector.findHandAperture(
@@ -400,3 +249,4 @@ def main(camera_source=0, show_fps=True, verbose=False):
 if __name__ == '__main__':
     # change this to zero if you don't have a usb webcam but an in-built camera
     main(camera_source=0)
+    
