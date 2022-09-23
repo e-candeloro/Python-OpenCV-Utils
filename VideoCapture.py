@@ -64,7 +64,7 @@ def videocapture(fps_cap=60, show_fps=True, source=0):
             cv2.imshow("Frame (press 'q' to exit)", frame)
 
         # if the key "q" is pressed on the keyboard, the program is terminated
-        if cv2.waitKey(20) & 0xFF == ord('q'):
+        if cv2.waitKey(5) & 0xFF == ord('q'):
             break
 
     cap.release()
